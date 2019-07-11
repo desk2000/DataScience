@@ -14,7 +14,7 @@
 ## 7/11
 學習 dplyr package 的功能
  
-HW:[Relationships between country HDI and EFW](https://desk2000.github.io/DataScience/blob/master/1.2/dplyr/dplyr_practice.html)
+HW:[Relationships between country HDI and EFW](https://desk2000.github.io/DataScience/1.2/dplyr/dplyr_practice.html)
 原始資料在同一資料夾中
 
 # Week2
