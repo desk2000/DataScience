@@ -15,7 +15,7 @@ library(tidyverse)
 library(dplyr)
 library(readxl)
 efw_cc <- read_excel("D:/GitHub Files/DataScience/1.2/dplyr/efw_cc.xlsx")
-hdi <- hdi <- read_excel("D:/GitHub Files/DataScience/1.2/dplyr/hdi.xlsx")
+hdi <- read_excel("D:/GitHub Files/DataScience/1.2/dplyr/hdi.xlsx")
 efw1 = select(efw_cc, year, "countries", "ECONOMIC FREEDOM")
 efw2 = filter(efw1, year == 2016) 
 hdi1 = select(hdi, Country, "2016")
@@ -27,8 +27,16 @@ general = general %>%
   rename(
      HDI = '2016')
 general$year = NULL
-
 general
+
+##visualizing data
+plot(x = general$HDI,
+	y = general$"ECONOMIC FREEDOM",
+	main = "Relationship between HDI and Economic Freedom by Country",
+	xlab = "Human Developement Index",       
+     ylab = "Economic Freedom" 
+	)
+
 
 
 ```
