@@ -1,0 +1,46 @@
+---
+title: "dplyr & visualize"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+data source : https://www.kaggle.com/gzanatta/comparing-economic-freedom-with-the-hdi-eda
+original data
+```{r tidy}
+
+library(tidyverse)
+library(dplyr)
+library(readxl)
+efw_cc <- read_excel("D:/GitHub Files/DataScience/1.2/dplyr/efw_cc.xlsx")
+hdi <- read_excel("D:/GitHub Files/DataScience/1.2/dplyr/hdi.xlsx")
+efw1 = select(efw_cc, year, "countries", "ECONOMIC FREEDOM")
+efw2 = filter(efw1, year == 2016) 
+hdi1 = select(hdi, Country, "2016")
+hdi1 = hdi1 %>%
+  rename(
+    "countries" = Country)
+general = merge(hdi1, efw2, by = "countries")
+general = general %>%
+  rename(
+     HDI = '2016')
+general$year = NULL
+general
+
+##visualizing data
+lm(general$"ECONOMIC FREEDOM" ~ general$HDI)
+plot(x = general$HDI,
+	y = general$"ECONOMIC FREEDOM",
+	main = "Relationship between HDI and Economic Freedom by Country",
+	xlab = "Human Developement Index",       
+     ylab = "Economic Freedom" 
+	)
+abline(lm(general$"ECONOMIC FREEDOM" ~ general$HDI))
+
+
+
+```
+
+
