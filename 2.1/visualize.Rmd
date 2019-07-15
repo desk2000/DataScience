@@ -9,6 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 data source : https://www.kaggle.com/gzanatta/comparing-economic-freedom-with-the-hdi-eda
 original data
+cleaning data
 ```{r tidy}
 
 library(tidyverse)
@@ -28,8 +29,10 @@ general = general %>%
      HDI = '2016')
 general$year = NULL
 general
+```
 
-##visualizing data
+#visualizing data using scatter diagram, conbined with a regression line
+```{r}
 lm(general$"ECONOMIC FREEDOM" ~ general$HDI)
 plot(x = general$HDI,
 	y = general$"ECONOMIC FREEDOM",
@@ -38,9 +41,7 @@ plot(x = general$HDI,
      ylab = "Economic Freedom" 
 	)
 abline(lm(general$"ECONOMIC FREEDOM" ~ general$HDI))
-
-
-
 ```
 
+Generally, the higher HDI a country has, the more free its economic system.
 
