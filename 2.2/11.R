@@ -1,0 +1,230 @@
+
+library(tidyverse)
+library(rvest)
+library(stringr)
+library(jiebaR)
+library(jiebaRD)
+library(tmcn)
+library(tibble)
+library(bitops)
+library(httr)
+library(RCurl)
+library(XML)
+library(tm)
+library(NLP)
+library(dplyr)
+
+
+
+ptt.url <- "https://www.ptt.cc"
+gossiping.url <- str_c(ptt.url, "/bbs/Gossiping")
+gossiping.pre.session <- html_session(url = gossiping.url)
+gossiping.pre.session
+full_page <- read_html(gossiping.url)
+full_page
+form.18 <- gossiping.pre.session %>%
+  html_node("form")%>%
+  html_form()
+form.18
+gossiping.session <- submit_form(
+  session = gossiping.pre.session,
+  form = form.18,
+  submit = "yes"
+)
+gossiping.session
+
+
+
+page.latest <- gossiping.session %>%
+  html_node(".wide:nth-child(2)") %>%
+  html_attr("href") %>%
+  str_extract("[0-9]+")%>%
+  as.numeric()
+page.latest
+links.article <- NULL
+page.number <- 130
+page.index <- page.latest
+page.processed <- 0
+for (page.index in page.latest : (page.latest - page.number)){
+  page.processed <- page.processed + 1
+  link <- str_c(gossiping.url, "/index", page.index, ".html")
+  cat("fetching links", page.processed, "/", page.number + 1, "...", link, "\n")
+  links.article <- c(links.article,
+                     gossiping.session %>%
+                       jump_to(link) %>%
+                       html_nodes(".title a") %>%
+                       html_attr("href"))}
+links.article <- unique(links.article)
+
+
+temp.data <- data.frame(
+  titles = NA,
+  texts = NA,
+  time.stamp = NA,
+  pushes = NA)
+tab <- data.frame(
+  titles = NA,
+  texts = NA,
+  time.stamp = NA,
+  pushes = NA)
+progress <- 0
+for (i in 1 : length(links.article)){
+  progress <- progress + 1
+  article.link <- paste0(ptt.url, links.article[i])
+  cat('processing article', progress, '/', length(links.article), '...')
+  print(article.link)
+  temp.session <- gossiping.session %>%
+    jump_to(article.link)
+  print(temp.session)
+  temp.data[progress,"titles"] <- paste(temp.session %>%
+                                          html_nodes(".article-metaline-right+ .article-metaline .article-meta-value") %>%
+                                          html_text() %>%
+                                          str_c(collapse = ""), "")
+  temp.data[progress,'texts'] <- paste(temp.session %>%
+                                         html_nodes(xpath = '//*[@id="main-content"]/text()') %>%
+                                         html_text() %>%
+                                         str_c(collapse = ""), "")
+  temp.data[progress,"time.stamp"] <- paste(temp.session %>%
+                                              html_nodes(".article-metaline+ .article-metaline .article-meta-value") %>%
+                                              html_text() %>%
+                                              str_c(collapse = ""), "")
+  temp.data[progress,"pushes"] <- paste(temp.session %>%
+                                          html_nodes(".push-tag") %>%
+                                          html_text() %>%
+                                          str_c(collapse = ""), "")
+}
+
+error.row = NULL
+need.erase = FALSE
+for (i in 1:nrow(temp.data)) {
+  if(temp.data[i, 1] == " "){
+    error.row <- c(error.row, i)
+    need.erase = TRUE
+  }
+}
+if(need.erase){temp.data <- temp.data[-as.vector(error.row), ]}
+
+pttData <- temp.data 
+n <- nrow(temp.data)
+parts <- data.frame(
+  day = c('1'), 
+  month = c('1'),
+  date = c('1'),
+  time = c('1'),
+  year = c('1'), 
+  stringsAsFactors = FALSE
+)
+for (i in 1 : n) {
+  temp.parts <- as.character(pttData[i, "time.stamp"]) %>%
+    strsplit(split = " ") %>%
+    unlist()
+  print(temp.parts)
+  parts <- rbind(parts, temp.parts)
+}
+time.temp <- data.frame(parts)
+parts <- parts[-c(1), ]
+data1 <- cbind(pttData, parts)
+hour <- NULL
+sep.time <- as.vector(data1['time']) %>% unlist()
+for (i in 1 : n) {
+  temp.sep <- sep.time[i] %>%
+    as.character() %>%
+    strsplit(split=":") %>%
+    unlist()
+  hour <- c(hour, as.numeric(temp.sep[1])) 
+}
+data2 <- cbind(pttData, hour)
+
+setwd("D:/GitHub Files/DataScience/2.2")
+for(h in 0 : 23){
+  #n.titles <- NULL
+  print(h)
+  ndata <- filter(data2, hour == h)
+  head(ndata)
+  file.name <- './DATA/'
+  if(!file.exists(paste0(file.name, 'titles/', h,' title.txt'))){file.create(paste0(file.name, 'titles/', h,' title.txt'))}
+  if(!file.exists(paste0(file.name, 'texts/', h,' texts.txt'))){file.create(paste0(file.name, 'texts/', h,' texts.txt'))}
+  if(nrow(ndata) == 0) {
+    print('1')
+    next
+  }
+  #rpl <- grep("^Re:", ndata['titles'])
+  #n.titles <- ndata['titles']
+  #n.titles <- n.titles
+  for (i in 0 : 23) {
+    write(character(0), paste0(file.name, 'titles/', h,' title.txt'), append = FALSE)
+    write(character(0), paste0(file.name, 'texts/', h,' texts.txt'), append = FALSE)
+  }
+  doc <- function(d){
+    write(d['titles'], paste0(file.name, 'titles/', h,' title.txt'), append = TRUE)
+    write(d['texts'], paste0(file.name, 'texts/', h,' texts.txt'), append = TRUE)    
+  }
+  apply(ndata, 1, doc)
+}
+
+folder <- 'titles/'
+d.corpus <- Corpus(DirSource(paste0("./DATA/", folder)))
+d.corpus <- tm_map(d.corpus, removePunctuation)
+d.corpus <- tm_map(d.corpus, removeNumbers)
+d.corpus <- tm_map(d.corpus, function(word) {
+  gsub("[A-Za-z0-9]", "", word)
+})
+mixseg = worker()
+tokenizer = function(d)
+{
+  unlist(segment(d[[1]], mixseg) )
+}
+seg = lapply(d.corpus, tokenizer)
+
+count_token = function(d)
+{
+  as.data.frame(table(d))
+}
+tokens = lapply(seg, count_token)
+
+n = length(seg)
+TDM.titles = tokens[[1]]
+colNames <- names(seg)
+colNames <- gsub(".txt", "", colNames)
+
+for(id in 2 : 24)
+{
+  TDM.titles = merge(TDM.titles, tokens[[id]], by="d", all = TRUE)
+  names(TDM.titles) = c('d', colNames[1 : id])
+}
+TDM.titles[is.na(TDM.titles)] <- 0
+
+folder <- 'texts/'
+d.corpus <- Corpus(DirSource(paste0("./DATA/", folder)))
+d.corpus <- tm_map(d.corpus, removePunctuation)
+d.corpus <- tm_map(d.corpus, removeNumbers)
+d.corpus <- tm_map(d.corpus, function(word) {
+  gsub("[A-Za-z0-9]", "", word)
+})
+mixseg = worker()
+tokenizer = function(d)
+{
+  unlist(segment(d[[1]], mixseg) )
+}
+seg = lapply(d.corpus, tokenizer)
+
+count_token = function(d)
+{
+  as.data.frame(table(d))
+}
+tokens = lapply(seg, count_token)
+n = length(seg)
+TDM.texts = tokens[[1]]
+colNames <- names(seg)
+colNames <- gsub(".txt", "", colNames)
+
+for(id in 2 : 24)
+{
+  #if(length(rownames(tokens[[id]])) == 0){
+  #  colNames <- colNames[-id]
+  # next
+  #}
+  TDM.texts = merge(TDM.texts, tokens[[id]], by="d", all = TRUE)
+  names(TDM.texts) = c('d', colNames[1 : id])
+}
+TDM.texts[is.na(TDM.texts)] <- 0
