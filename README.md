@@ -24,6 +24,9 @@ HW:[Relationships between country HDI and EFW](https://desk2000.github.io/DataSc
 HW:[Relationships between country HDI and EFW visualized](https://desk2000.github.io/DataScience/2.1/visualize.html)
 
 ## 7/18
+文字探勘
+HW:[Ptt Gossiping Terms](https://desk2000.github.io/DataScience/2.2/d.html)
+
 # Week3
 ## 7/22
 ## 7/25
